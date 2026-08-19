@@ -1,3 +1,4 @@
+import sys
 from scapy.all import *
 from mac_vendor_lookup import MacLookup
 from tqdm import tqdm
@@ -21,6 +22,17 @@ def main():
             ip = received.psrc
             mac = received.hwsrc
             devices[mac] = ip    
+
+    if "--trust" in sys.argv:
+        trusted = {}
+        for mac in devices:
+            if not is_private(mac):
+                trusted[mac] = devices[mac]
+
+        file = open("trusted-devices.json", "w")
+        json.dump(trusted, file)
+        file.close()
+
     save_scan_history(devices, trusted_devices, vendor_lookup)
 
     print()
