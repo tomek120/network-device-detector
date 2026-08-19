@@ -1,6 +1,8 @@
 from scapy.all import *
 from mac_vendor_lookup import MacLookup
 from tqdm import tqdm
+import csv
+from datetime import datetime
 RED = "\033[91m"
 GREEN = "\033[92m"
 RESET = "\033[0m"
@@ -12,14 +14,18 @@ def main():
     arp = ARP(pdst="192.168.1.0/24")
     packet = eth / arp
     devices = {}
+
     for x in tqdm(range(10)):
         answered, unanswered = srp(packet, timeout=2, verbose=False)
         for sent, received in answered:
             ip = received.psrc
             mac = received.hwsrc
-            devices[mac] = ip
+            devices[mac] = ip    
+    save_scan_history(devices, trusted_devices, vendor_lookup)
+
     print()
     print("Found devices: ")
+
     for mac, ip in devices.items():
         if is_private(mac):                
             print(f"{ip} Private {RED}{is_trusted(mac, trusted_devices)}{RESET}")
@@ -48,6 +54,23 @@ def is_trusted(mac, trusted_device_list):
         if mac in trusted_device_list:
             return "Trusted"
         return "New"
+
+def save_scan_history(devices, trusted_devices, vendor_lookup, filename="scan_history.csv"):
+    now = datetime.now()
+    file = open(filename, "a")
+    writer = csv.writer(file)
+
+    for mac, ip in devices.items():
+        if is_private(mac):
+            vendor = "Private"
+        else:
+            vendor = vendor_lookup.lookup(mac)
+        status = is_trusted(mac, trusted_devices)
+        writer.writerow([now, ip, mac, vendor, status])
+
+    file.close()
+
+
 if __name__ == "__main__":
     main()
 
